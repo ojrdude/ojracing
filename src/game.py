@@ -2,8 +2,6 @@
 Main game entry point
 """
 from direct.showbase.ShowBase import ShowBase
-import os.path
-from direct.showutil.FreezeTool import okMissing
 
 
 class Game(ShowBase):
