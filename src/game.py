@@ -23,6 +23,7 @@ class Game(ShowBase):
         self.car = self.loader.loadModel('models/car1')
         self.car.setPos(0, 50, 1)
         self.car.setHpr(90, 0, 0)
+        self.car.setScale(0.25, 0.25, 0.25)
         self.car.reparentTo(self.render)
 
         self.taskMgr.add(self.alignCameraBehindCar, "Align Camera Behind Car")
@@ -39,9 +40,9 @@ class Game(ShowBase):
 
         carHeadingRadians = radians(carHeadingDegrees)
 
-        cameraXpos = carXpos + 10 * sin(carHeadingRadians)
-        cameraYpos = carYpos - 10 * cos(carHeadingRadians)
-        self.camera.setPos(cameraXpos, cameraYpos, carZpos + 1)
+        cameraXpos = carXpos + 3.5 * sin(carHeadingRadians)
+        cameraYpos = carYpos - 3.5 * cos(carHeadingRadians)
+        self.camera.setPos(cameraXpos, cameraYpos, carZpos + 0.4)
         self.camera.setHpr(
             cameraHeadingDegrees, cameraPitchDegrees, cameraRollDegrees)
         return Task.cont
