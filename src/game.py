@@ -5,6 +5,8 @@ from direct.showbase.ShowBase import ShowBase
 from direct.task.Task import Task
 from math import cos, sin, radians
 
+from car.car import Car
+
 
 # pylint: disable = E1101
 # Type guessing wrong
@@ -20,13 +22,16 @@ class Game(ShowBase):
         self.scene = self.loader.loadModel('models/track1')
         self.scene.reparentTo(self.render)
 
-        self.car = self.loader.loadModel('models/car1')
-        self.car.setPos(0, 50, 1)
-        self.car.setHpr(90, 0, 0)
-        self.car.setScale(0.25, 0.25, 0.25)
+        self.car = Car('models/car1',
+                       pos=(0, 50, 1),
+                       hpr=(90, 0, 0),
+                       scale=(0.25, 0.25, 0.25),
+                       showBase=self)
+
         self.car.reparentTo(self.render)
 
         self.taskMgr.add(self.alignCameraBehindCar, "Align Camera Behind Car")
+        self.car.initialisePhysics()
 
     def alignCameraBehindCar(self, task):
         """
