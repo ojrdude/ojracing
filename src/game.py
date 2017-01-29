@@ -21,9 +21,10 @@ class Game(ShowBase):
         self.disableMouse()
         self.scene = self.loader.loadModel('models/track1')
         self.scene.reparentTo(self.render)
+        self.scene.setScale(1.25, 1.25, 1.25)
 
         self.car = Car('models/car1',
-                       pos=(0, 50, 1),
+                       pos=(0, 60, 1),
                        hpr=(90, 0, 0),
                        scale=(0.25, 0.25, 0.25),
                        showBase=self)
