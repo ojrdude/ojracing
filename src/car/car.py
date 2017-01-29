@@ -1,98 +1,83 @@
 """
 Car definition and physics.
 """
-from direct.actor.Actor import Actor
 from direct.task.Task import Task
-from math import radians, sin, cos
-from panda3d.core import KeyboardButton
+from panda3d.core import KeyboardButton, NodePath
+from panda3d.physics import ActorNode, ForceNode, LinearVectorForce
 
 
-class Car(Actor):
+class Car(object):
     """
     A car within the game
     """
 
-    _ACCELERATION_RATE = 0.001
-    _DECELERATION_RATE = 0.001
-    _TURNING_RATE = 0.4
-    _TOP_SPEED = 10
+    _MASS = 1000  # kg
+    _ACCEL = 100
+    _ENGINE_BRAKING = 80
+    _TOP_SPEED = 100
 
     def __init__(self, model, pos, hpr, scale, showBase):
-        super(Car, self).__init__(models=model)
-        self.setPos(pos)
-        self.setHpr(hpr)
-        self.setScale(scale)
+        self.node = NodePath('CarPhysicsNode')
+        self.node.reparentTo(showBase.render)
+        self.node.setPos(pos)
+        self.node.setHpr(hpr)
+        self.node.setScale(scale)
+
+        self.actorNode = ActorNode('CarPhysics')
+        self.pandaNode = self.node.attachNewNode(self.actorNode)
+        showBase.physicsMgr.attachPhysicalNode(self.actorNode)
+        self.model = showBase.loader.loadModel(model)
+        self.model.reparentTo(self.pandaNode)
 
         self._showBase = showBase
-        self._speed = 0
+        self.actorNode.getPhysicsObject().setMass(self._MASS)
+
+        self._accelForce, self._deccelForce = self._initialiseAccelAndDeccel()
+
 
     def initialisePhysics(self):
         """
         Sets up and starts the physics of the car.
         """
-        self._showBase.taskMgr.add(self._acceleration, 'Calculate car acceleration')
-        self._showBase.taskMgr.add(self._steer, 'Calculate car steering')
-        self._showBase.taskMgr.add(self._move, 'Move Car')
+        self._showBase.taskMgr.add(self._accelerate, 'acceleration')
 
-    def _acceleration(self, task):
+    def _accelerate(self, task):
         """
-        Check if the accelerator key is being pressed and increase
-        the car's speed if it is. Currently the accelerator is UP.
+        Perform acceleration by applying acceleration force or engine
+        braking depending on whether the accelerator is being pressed.
         """
         isDown = self._showBase.mouseWatcherNode.is_button_down
-
+        physicalObject = self.actorNode.getPhysical(0)
         if isDown(KeyboardButton.up()):
-            speedIncrease = task.time * self._ACCELERATION_RATE
-            newSpeed = self._speed + speedIncrease
-            if newSpeed > self._TOP_SPEED:
-                self._speed = self._TOP_SPEED
-            else:
-                self._speed = newSpeed
-        else:
-            speedDecrease = task.time * self._DECELERATION_RATE
-            newSpeed = self._speed - speedDecrease
-            if newSpeed < 0:
-                self._speed = 0
-            else:
-                self._speed = newSpeed
-
-        return Task.cont
-
-    def _move(self, task):
-        """
-        Move the car in the direction it is facing. How far it is moved
-        is dependent on its speed.
-        """
-        currentX, currentY, currentZ = self.getPos()
-        currentHeadingDegrees, _, _ = self.getHpr()
-
-        currentHeadingRadians = radians(currentHeadingDegrees)
-
-        newXPos = currentX - self._speed * sin(currentHeadingRadians) * task.time
-        newYPos = currentY + self._speed * cos(currentHeadingRadians) * task.time
-
-        self.setPos(newXPos, newYPos, currentZ)
-
-        return Task.cont
-
-    def _steer(self, task):
-        """
-        Change the heading of the car if the steer left or steer right button
-        is pressed.
-        """
-        isDown = self._showBase.mouseWatcherNode.is_button_down
-
-        leftPressed = isDown(KeyboardButton.left())
-        rightPressed = isDown(KeyboardButton.right())
-        if leftPressed == rightPressed:
-            # Both pressed or neither pressed
+            physicalObject.addLinearForce(self._accelForce)
+            physicalObject.removeLinearForce(self._deccelForce)
             return Task.cont
 
-        currentHeading = self.getH()
-
-        if leftPressed:
-            self.setH(currentHeading + task.time * self._TURNING_RATE)
+        _, speed, _ = self.actorNode.getPhysicsObject().getVelocity()
+        if speed <= 0:
+            physicalObject.removeLinearForce(self._deccelForce)
+        elif speed >= self._TOP_SPEED:
+            physicalObject.removeLinearForce(self._accelForce)
         else:
-            self.setH(currentHeading - task.time * self._TURNING_RATE)
+            physicalObject.addLinearForce(self._deccelForce)
+            physicalObject.removeLinearForce(self._accelForce)
 
         return Task.cont
+
+    def _initialiseAccelAndDeccel(self):
+        """
+        Define and return the acceleration and engine braking forces
+        """
+        accelFN = ForceNode('acceleration')
+        deccelFN = ForceNode('deceleration')
+        self.node.attachNewNode(accelFN)
+        self.node.attachNewNode(deccelFN)
+
+        accelForce = LinearVectorForce(0, self._ACCEL, 0)
+        accelForce.setMassDependent(1)
+        deccelForce = LinearVectorForce(0, -1 * self._ENGINE_BRAKING, 0)
+        deccelForce.setMassDependent(1)
+        accelFN.addForce(accelForce)
+        deccelFN.addForce(deccelForce)
+
+        return accelForce, deccelForce
