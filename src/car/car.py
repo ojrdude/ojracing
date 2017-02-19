@@ -12,8 +12,8 @@ class Car(object):
     """
 
     _MASS = 1000  # kg
-    _ACCEL = 100
-    _ENGINE_BRAKING = 80
+    _ACCEL = 10000
+    _ENGINE_BRAKING = 8000
     _TOP_SPEED = 100
 
     def __init__(self, model, pos, hpr, scale, showBase):
@@ -41,6 +41,8 @@ class Car(object):
         """
         self._showBase.taskMgr.add(self._accelerate, 'acceleration')
 
+    # pylint: disable=W0613
+    # task needed for Task interface but not actually used.
     def _accelerate(self, task):
         """
         Perform acceleration by applying acceleration force or engine
@@ -48,8 +50,10 @@ class Car(object):
         """
         isDown = self._showBase.mouseWatcherNode.is_button_down
         physicalObject = self.actorNode.getPhysical(0)
+        currentForceList = physicalObject.getLinearForces()
         if isDown(KeyboardButton.up()):
-            physicalObject.addLinearForce(self._accelForce)
+            if self._accelForce not in currentForceList:
+                physicalObject.addLinearForce(self._accelForce)
             physicalObject.removeLinearForce(self._deccelForce)
             return Task.cont
 
@@ -59,10 +63,12 @@ class Car(object):
         elif speed >= self._TOP_SPEED:
             physicalObject.removeLinearForce(self._accelForce)
         else:
-            physicalObject.addLinearForce(self._deccelForce)
+            if self._deccelForce not in currentForceList:
+                physicalObject.addLinearForce(self._deccelForce)
             physicalObject.removeLinearForce(self._accelForce)
 
         return Task.cont
+    # pylint: enable=W0613
 
     def _initialiseAccelAndDeccel(self):
         """
